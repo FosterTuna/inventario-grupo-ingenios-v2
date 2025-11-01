@@ -1,0 +1,12 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_inventario_nuevo # Cambiamos el nombre para evitar conflictos
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data-nuevo:/data/db # Usamos un nuevo volumen
+    restart: unless-stopped
+
+volumes:
+  mongo-data-nuevo:
