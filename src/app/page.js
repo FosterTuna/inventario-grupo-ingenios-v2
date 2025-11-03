@@ -1,50 +1,51 @@
 // app/page.js
 "use client";
 
-import { useState } from 'react';
-import axios from 'axios'; // <-- Cambio: Importamos axios
+import { useState, FormEvent } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/navigation'; // <-- Cambio: Importamos el router
 
 export default function LoginPage() {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [rol, setRol] = useState('');
-  const [error, setError] = useState(''); // <-- Cambio: Estado para mensajes de error
+  const [error, setError] = useState('');
+  
+  const router = useRouter(); // <-- Cambio: Inicializamos el router
 
-  // --- Función actualizada para enviar datos al backend ---
-  const handleSubmit = async (event) => { // <-- Cambio: Hacemos la función async
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setError(''); // Limpiamos errores previos
+    setError('');
 
     try {
-      // Hacemos la petición POST al backend
       const response = await axios.post('http://localhost:5000/api/usuarios/login', {
-        'nick-name': nickname, // Asegúrate de que coincida con el backend
+        'nick-name': nickname,
         password: password,
-        // Nota: El rol no se envía usualmente en el login, el backend lo sabe
+        // Nota: No enviamos el 'rol', el backend lo determina
       });
 
-      // Si el login es exitoso
+      // --- Cambios Principales Aquí ---
       console.log('Login exitoso:', response.data);
       const token = response.data.token;
 
-      // --- PASO FUTURO: Guardar el token y redirigir ---
-      // localStorage.setItem('authToken', token);
-      // window.location.href = '/dashboard'; // O usar el router de Next.js
+      // 1. Guardar el token en el almacenamiento local del navegador
+      localStorage.setItem('authToken', token);
 
-      alert('¡Inicio de sesión exitoso! Revisa la consola para ver el token.'); // Mensaje temporal
+      // 2. Redirigir al usuario al dashboard
+      router.push('/dashboard'); // <-- Cambio: Redirigimos a la nueva página
 
     } catch (err) {
-      // Si hay un error (ej. credenciales incorrectas)
       console.error('Error en el login:', err.response?.data?.message || 'Error desconocido');
-      setError(err.response?.data?.message || 'Error al iniciar sesión. Inténtalo de nuevo.'); // <-- Cambio: Mostramos error
+      setError(err.response?.data?.message || 'Error al iniciar sesión. Inténtalo de nuevo.');
     }
   };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-
-        {/* ... (Las partes de h1, h2, p se mantienen igual) ... */}
+        
+        {/* El resto del formulario (h1, h2, form, inputs, etc.) se mantiene igual */}
+        
         <h1 className="text-center text-2xl font-bold text-gray-900">
           Bienvenido al Sistema de Inventario
         </h1>
@@ -56,8 +57,7 @@ export default function LoginPage() {
         </p>
 
         <form onSubmit={handleSubmit}>
-          {/* ... (El select de Rol se mantiene igual) ... */}
-           <div className="mb-4">
+          <div className="mb-4">
             <label htmlFor="rol" className="mb-2 block font-semibold text-gray-700">
               Seleccionar Rol
             </label>
@@ -77,8 +77,7 @@ export default function LoginPage() {
             </select>
           </div>
 
-          {/* ... (El input de nick-name se mantiene igual) ... */}
-           <div className="mb-4">
+          <div className="mb-4">
             <label htmlFor="nickname" className="mb-2 block font-semibold text-gray-700">
               nick-name
             </label>
@@ -93,7 +92,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* ... (El input de password se mantiene igual) ... */}
           <div className="mb-6">
             <label htmlFor="password" className="mb-2 block font-semibold text-gray-700">
               Contraseña
@@ -109,10 +107,8 @@ export default function LoginPage() {
             />
           </div>
 
-
-          {/* Mostramos el mensaje de error si existe */}
           {error && (
-            <p className="mb-4 text-center text-sm text-red-600">{error}</p> // <-- Cambio
+            <p className="mb-4 text-center text-sm text-red-600">{error}</p>
           )}
 
           <button
