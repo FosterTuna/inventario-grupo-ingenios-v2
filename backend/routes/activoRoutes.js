@@ -38,4 +38,23 @@ router.post('/', auth, async (req, res) => { // 'auth' protege la ruta
   }
 });
 
+// --- OBTENER UN ACTIVO ESPECÍFICO POR ID (Ruta Protegida) ---
+// ----- ¡ESTA ES LA RUTA QUE FALTABA! -----
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const activo = await Activo.findById(req.params.id);
+    
+    if (!activo) {
+      return res.status(404).json({ message: 'Activo no encontrado.' });
+    }
+    
+    res.json(activo); // Devuelve el activo encontrado
+    
+  } catch (error) {
+    // Maneja errores (ej. un ID mal formateado)
+    res.status(500).json({ message: 'Error al obtener el activo: ' + error.message });
+  }
+});
+// ----- FIN DE LA RUTA NUEVA -----
+
 module.exports = router; // Exporta el router

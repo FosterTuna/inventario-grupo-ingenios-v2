@@ -1,5 +1,6 @@
-// src/app/components/ActivosTable.js
 "use client";
+import Link from 'next/link';
+// src/app/components/ActivosTable.js
 import { useActivos } from '../context/ActivosContext'; // <-- CAMBIO: Importamos el hook
 
 // La tabla ya NO recibe 'onOpenMovimientoModal' como prop
@@ -52,7 +53,7 @@ export default function ActivosTable() {
                 
                 {/* --- CAMBIO EN ACCIONES --- */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <a href="#" className="text-blue-600 hover:text-blue-900">Ver Detalles</a>
+                  <Link href={`/dashboard/activos/${activo._id}`} className="text-blue-600 hover:text-blue-900">Ver Detalles</Link>
                   <button
                     onClick={() => openMovModal(activo)} // <-- CAMBIO: Llama a la función del contexto
                     className="ml-4 text-blue-600 hover:text-blue-900"

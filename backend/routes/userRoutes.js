@@ -81,6 +81,37 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Error en el servidor durante el login: ' + error.message });
   }
 });
+// --- RUTA: ELIMINAR UN USUARIO (Protegida) ---
+// Usamos :id para indicar que el ID del usuario vendrá en la URL
+router.delete('/:id', auth, async (req, res) => {
+  // Verificamos que el usuario que hace la petición sea un 'Jefe' (o 'Sub-jefe')
+  // Esta es una capa extra de seguridad
+  if (req.user.rol !== 'Jefe' && req.user.rol !== 'Sub-jefe') {
+    return res.status(403).json({ message: 'No tienes permiso para eliminar usuarios.' });
+  }
 
+  try {
+    const userId = req.params.id; // Obtenemos el ID de la URL
+    const userToDelete = await User.findById(userId);
+
+    if (!userToDelete) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    // --- REGLA DE NEGOCIO ---
+    // Evitamos que un Jefe sea borrado
+    if (userToDelete.rol === 'Jefe') {
+      return res.status(400).json({ message: 'No se puede eliminar a un usuario con rol de Jefe.' });
+    }
+
+    // Usamos deleteOne() para borrar el usuario
+    await User.deleteOne({ _id: userId });
+
+    res.json({ message: 'Usuario eliminado correctamente.' });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar el usuario: ' + error.message });
+  }
+});
 
 module.exports = router; // Exportamos el router para usarlo en index.js
