@@ -1,14 +1,11 @@
-"use client";
-import Link from 'next/link';
 // src/app/components/ActivosTable.js
-import { useActivos } from '../context/ActivosContext'; // <-- CAMBIO: Importamos el hook
+"use client";
+import { useActivos } from '../context/ActivosContext';
+import Link from 'next/link'; // <-- 1. Importamos Link
 
-// La tabla ya NO recibe 'onOpenMovimientoModal' como prop
 export default function ActivosTable() {
-  // Obtenemos todo lo que necesitamos del contexto
-  const { activos, loading, error, openMovModal } = useActivos(); // <-- CAMBIO
+  const { activos, loading, error, openMovModal } = useActivos();
 
-  // ... (if loading, if error... se mantiene igual) ...
   if (loading) {
     return <div className="rounded-lg bg-white p-6 shadow-md text-gray-900">Cargando activos...</div>;
   }
@@ -17,9 +14,9 @@ export default function ActivosTable() {
   }
 
   return (
+    // Div principal (sin el h1 de prueba)
     <div className="rounded-lg bg-white shadow-md overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 text-gray-900">
-        {/* ... (thead se mantiene igual) ... */}
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">SKU</th>
@@ -35,7 +32,6 @@ export default function ActivosTable() {
           {activos && activos.length > 0 ? (
             activos.map((activo) => (
               <tr key={activo._id}>
-                {/* ... (celdas de datos se mantienen igual) ... */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{activo.sku}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">{activo.nombre}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">{activo.tipo_activo}</td>
@@ -51,11 +47,15 @@ export default function ActivosTable() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">{activo.ubicacion?.bodega} / {activo.ubicacion?.estante}</td>
                 
-                {/* --- CAMBIO EN ACCIONES --- */}
+                {/* --- 2. ESTA ES LA SECCIÓN CORREGIDA --- */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <Link href={`/dashboard/activos/${activo._id}`} className="text-blue-600 hover:text-blue-900">Ver Detalles</Link>
+                  {/* El 'href' apunta a la ruta de activos con el ID */}
+                  <Link href={`/dashboard/activos/${activo._id}`} className="text-blue-600 hover:text-blue-900">
+                    Ver Detalles
+                  </Link>
+                  
                   <button
-                    onClick={() => openMovModal(activo)} // <-- CAMBIO: Llama a la función del contexto
+                    onClick={() => openMovModal(activo)}
                     className="ml-4 text-blue-600 hover:text-blue-900"
                   >
                     Registrar Mov.

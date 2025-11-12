@@ -4,18 +4,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import AddUsuarioModal from '../../components/AddUsuarioModal';
+import AddUsuarioModal from '../../components/AddUsuarioModal'; 
+import EditUsuarioModal from '../../components/EditUsuarioModal'; // <-- CAMBIO: Importamos el modal de edición
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Estados para los modales
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // <-- CAMBIO: Estado para el modal de edición
+  const [selectedUser, setSelectedUser] = useState(null); // <-- CAMBIO: Para saber a quién editar
 
-  // Definimos la función para cargar usuarios
+  // Función para cargar usuarios (sin cambios)
   const fetchUsuarios = useCallback(async () => {
-    // No ponemos setLoading(true) aquí para que la tabla no parpadee al refrescar
+    // ... (el código de fetchUsuarios es el mismo que ya tenías) ...
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -37,45 +42,45 @@ export default function UsuariosPage() {
     }
   }, [router]);
 
-  // Carga inicial de usuarios
   useEffect(() => {
     fetchUsuarios();
   }, [fetchUsuarios]);
-
   
-  const handleEdit = (id) => console.log('Editar usuario:', id);
+  // --- CAMBIO: Actualizamos la función handleEdit ---
+  const handleEdit = (user) => {
+    setSelectedUser(user); // 1. Guarda el usuario seleccionado
+    setIsEditModalOpen(true); // 2. Abre el modal de edición
+  };
 
-  // --- CAMBIO CLAVE AQUÍ ---
+  // La función de eliminar se mantiene (sin cambios)
   const handleDelete = async (userId, userNickName) => {
-    // 1. Pedimos confirmación
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar al usuario "${userNickName}"? Esta acción no se puede deshacer.`)) {
-      return; // Si el usuario cancela, no hacemos nada
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar al usuario "${userNickName}"?`)) {
+      return;
     }
-
     try {
       const token = localStorage.getItem('authToken');
-      // 2. Llamamos al endpoint DELETE del backend
       await axios.delete(`http://localhost:5000/api/usuarios/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      // 3. Refrescamos la tabla para mostrar los cambios
       fetchUsuarios(); 
-
     } catch (err) {
       console.error('Error al eliminar usuario:', err);
-      // Mostramos el error que nos da el backend (ej. "No se puede eliminar a un Jefe")
       setError(err.response?.data?.message || 'Error al eliminar el usuario.');
     }
   };
-  // --- FIN DEL CAMBIO ---
 
-  const handleNewUser = () => setIsModalOpen(true);
-  
+  // --- CAMBIOS EN LAS FUNCIONES DE LOS MODALES ---
   const handleUserAdded = () => {
-    setIsModalOpen(false);
+    setIsAddModalOpen(false);
     fetchUsuarios();
   };
+  
+  const handleUserUpdated = () => {
+    setIsEditModalOpen(false);
+    setSelectedUser(null);
+    fetchUsuarios();
+  };
+  // --- FIN DE CAMBIOS ---
 
   if (loading) {
     return <div className="text-gray-900">Cargando usuarios...</div>;
@@ -87,14 +92,13 @@ export default function UsuariosPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
         <button
-          onClick={handleNewUser}
+          onClick={() => setIsAddModalOpen(true)}
           className="rounded-lg bg-blue-600 px-5 py-2.5 font-bold text-white hover:bg-blue-700"
         >
           + Nuevo Usuario
         </button>
       </div>
       
-      {/* Mostramos el error si existe */}
       {error && (
         <div className="my-4 rounded-md bg-red-100 p-3 text-center text-red-700">
           {error}
@@ -148,10 +152,15 @@ export default function UsuariosPage() {
                     </span>
                   </td>
                   
-                  {/* --- CAMBIO EN BOTÓN ELIMINAR --- */}
+                  {/* --- CAMBIO EN BOTÓN EDITAR --- */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onClick={() => handleEdit(user._id)} className="text-blue-600 hover:text-blue-900">Editar</button>
-                    {/* Le pasamos el ID y el nick-name para el mensaje de confirmación */}
+                    {/* Le pasamos el objeto 'user' completo a la función */}
+                    <button 
+                      onClick={() => handleEdit(user)} 
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Editar
+                    </button>
                     <button 
                       onClick={() => handleDelete(user._id, user['nick-name'])} 
                       className="ml-4 text-red-600 hover:text-red-900"
@@ -170,10 +179,18 @@ export default function UsuariosPage() {
         </table>
       </div>
 
-      {isModalOpen && (
+      {/* --- CAMBIO: Renderizado de AMBOS modales --- */}
+      {isAddModalOpen && (
         <AddUsuarioModal 
-          onClose={() => setIsModalOpen(false)} 
+          onClose={() => setIsAddModalOpen(false)} 
           onUserAdded={handleUserAdded} 
+        />
+      )}
+      {isEditModalOpen && (
+        <EditUsuarioModal 
+          user={selectedUser}
+          onClose={() => setIsEditModalOpen(false)}
+          onUserUpdated={handleUserUpdated}
         />
       )}
     </div>

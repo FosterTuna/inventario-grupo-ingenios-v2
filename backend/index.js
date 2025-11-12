@@ -16,10 +16,6 @@ app.use(cors());
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/usuarios', userRoutes); // Cualquier petición a /api/usuarios será manejada por userRoutes
 
-// --- Rutas ---
-//const userRoutes = require('./routes/userRoutes');
-//app.use('/api/usuarios', userRoutes);
-
 const activoRoutes = require('./routes/activoRoutes'); // Asegúrate que esté esta
 app.use('/api/activos', activoRoutes);                // y esta
 

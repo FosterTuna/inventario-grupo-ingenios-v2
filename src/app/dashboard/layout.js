@@ -3,7 +3,7 @@
 import React from 'react'; // Importamos React
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ActivosProvider, useActivos } from '../context/ActivosContext';
+import { ActivosProvider, useActivos } from '../context/ActivosContext'; // Importamos el Contexto
 import AddActivoModal from '../components/AddActivoModal';
 import RegistrarMovimientoModal from '../components/RegistrarMovimientoModal';
 
@@ -27,7 +27,6 @@ function Sidebar({ onOpenModal }) {
         <a
           href="/dashboard"
           className="mb-2 flex items-center rounded-lg px-4 py-2 text-gray-600 hover:bg-gray-100"
-          // (Podemos agregar lógica aquí para que se ponga azul si la ruta es '/dashboard')
         >
           <span className="font-medium">Inventario General</span>
         </a>
@@ -39,18 +38,13 @@ function Sidebar({ onOpenModal }) {
           + Agregar Herramienta / Material
         </button>
 
-        {/* --- CAMBIO AQUÍ --- */}
-        {/* Este es el vínculo que actualizamos. 
-            Lo cambiamos a una etiqueta <a> simple para asegurarnos de que navegue.
-            Asegúrate de que el href sea "/dashboard/usuarios". */}
+        {/* Vínculo de Usuarios */}
         <a
           href="/dashboard/usuarios" 
           className="flex items-center rounded-lg px-4 py-2 text-gray-600 hover:bg-gray-100"
         >
           <span className="font-medium">Usuarios</span>
         </a>
-        {/* --- FIN DEL CAMBIO --- */}
-
       </div>
 
       {/* Cerrar Sesión */}
@@ -66,10 +60,11 @@ function Sidebar({ onOpenModal }) {
   );
 }
 
-// --- LAYOUT PRINCIPAL DEL DASHBOARD ---
-// (Este componente interno nos permite usar el contexto)
+// --- LAYOUT INTERNO (para poder usar el contexto) ---
 function DashboardLayoutContent({ children }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
+  // Obtenemos los datos del modal de movimiento DESDE EL CONTEXTO
   const { isMovModalOpen, closeMovModal, selectedActivo } = useActivos();
 
   const handleOpenAddModal = () => setIsAddModalOpen(true);
@@ -79,16 +74,18 @@ function DashboardLayoutContent({ children }) {
     <div className="flex h-screen bg-gray-100">
       <Sidebar onOpenModal={handleOpenAddModal} />
       <main className="flex-1 overflow-y-auto p-8">
-        {children}
+        {children} {/* Aquí se renderiza la página (Dashboard o Usuarios) */}
       </main>
       
+      {/* Los modales viven aquí, controlados por el estado del layout y el contexto */}
       {isAddModalOpen && <AddActivoModal onClose={handleCloseAddModal} />}
       {isMovModalOpen && <RegistrarMovimientoModal onClose={closeMovModal} activo={selectedActivo} />}
     </div>
   );
 }
 
-// (El layout principal solo envuelve todo con el Proveedor)
+// --- LAYOUT PRINCIPAL (El que exportamos) ---
+// Este componente envuelve todo con el Proveedor de Contexto
 export default function DashboardLayout({ children }) {
   return (
     <ActivosProvider>

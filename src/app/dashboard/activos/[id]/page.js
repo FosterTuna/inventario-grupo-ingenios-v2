@@ -4,39 +4,43 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
-import Link from 'next/link';
+import Link from 'next/link'; // Importamos Link para el botón de "Volver"
 
-export default function ActivoDetallePage() {
+export default function DetallesActivoPage() {
   const [activo, setActivo] = useState(null); // Estado para guardar el activo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   const params = useParams(); // Hook para leer los parámetros de la URL
   const router = useRouter();
-  const { id } = params; // Obtenemos el ID del activo desde la URL
+  const { id } = params; // Obtenemos el ID del activo (ej. "69068b...") desde la URL
 
   // useEffect para cargar los datos del activo cuando la página carga
   useEffect(() => {
     if (id) { // Solo ejecuta si el ID está disponible
       const fetchActivoDetalle = async () => {
+        setLoading(true);
         try {
           const token = localStorage.getItem('authToken');
           if (!token) {
-            router.push('/');
+            router.push('/'); // Redirige al login si no hay token
             return;
           }
 
-          // Hacemos un GET al endpoint del backend para un solo activo
-          // (Este endpoint aún no lo hemos creado en el backend)
+          // Hacemos el GET al endpoint del backend para UN SOLO activo
           const response = await axios.get(`http://localhost:5000/api/activos/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
           setActivo(response.data); // Guardamos el activo encontrado
-          setLoading(false);
+          setError(null);
         } catch (err) {
           console.error('Error al cargar detalle:', err);
           setError('Error al cargar los detalles del activo.');
+          if (err.response && err.response.status === 401) {
+            router.push('/'); // Si el token es inválido, va al login
+          }
+        } finally {
           setLoading(false);
         }
       };
@@ -47,19 +51,19 @@ export default function ActivoDetallePage() {
 
   // --- Renderizado ---
   if (loading) {
-    return <div className="text-gray-900">Cargando detalles...</div>;
+    return <div className="text-gray-900 text-center p-10">Cargando detalles...</div>;
   }
   if (error) {
-    return <div className="text-red-600">{error}</div>;
+    return <div className="text-red-600 text-center p-10">{error}</div>;
   }
   if (!activo) {
-    return <div className="text-gray-900">Activo no encontrado.</div>;
+    return <div className="text-gray-900 text-center p-10">Activo no encontrado.</div>;
   }
 
-  // Una vez que tenemos los datos, los mostramos
+  // Si tenemos el activo, lo mostramos (basado en tu diseño de Figma)
   return (
-    <div className="rounded-lg bg-white p-6 shadow-md text-gray-900">
-      {/* Encabezado con botón de volver */}
+    <div className="rounded-lg bg-white p-6 shadow-md text-gray-900 max-w-4xl mx-auto">
+      {/* Encabezado */}
       <div className="flex items-center justify-between mb-6 border-b pb-4">
         <h1 className="text-3xl font-bold">{activo.nombre}</h1>
         <Link href="/dashboard" className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
@@ -69,7 +73,7 @@ export default function ActivoDetallePage() {
 
       {/* Layout de dos columnas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Columna Izquierda: Imagen y Detalles Principales */}
+        {/* Columna Izquierda */}
         <div className="md:col-span-1 space-y-4">
           <div className="flex h-64 items-center justify-center rounded-lg bg-gray-100">
             {/* Aquí iría la imagen */}
@@ -86,7 +90,7 @@ export default function ActivoDetallePage() {
           </div>
         </div>
 
-        {/* Columna Derecha: Descripción, Stock, Especificaciones */}
+        {/* Columna Derecha */}
         <div className="md:col-span-2 space-y-4">
           <div className="rounded-lg border border-gray-200 p-4">
             <h3 className="text-lg font-semibold mb-2">Descripción</h3>
@@ -106,10 +110,11 @@ export default function ActivoDetallePage() {
 
           <div className="rounded-lg border border-gray-200 p-4">
             <h3 className="text-lg font-semibold mb-3">Especificaciones</h3>
-            {/* (Aquí mapearíamos las especificaciones si existen) */}
             <p><strong>Marca:</strong> {activo.especificaciones?.marca || 'N/A'}</p>
             <p><strong>Color:</strong> {activo.especificaciones?.color || 'N/A'}</p>
           </div>
+          
+          {/* Aquí irá el Historial de Movimientos */}
         </div>
       </div>
     </div>

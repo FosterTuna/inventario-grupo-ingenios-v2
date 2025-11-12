@@ -1,9 +1,9 @@
 // app/page.js
 "use client";
 
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
-import { useRouter } from 'next/navigation'; // <-- Cambio: Importamos el router
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [nickname, setNickname] = useState('');
@@ -11,28 +11,29 @@ export default function LoginPage() {
   const [rol, setRol] = useState('');
   const [error, setError] = useState('');
   
-  const router = useRouter(); // <-- Cambio: Inicializamos el router
+  const router = useRouter();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
 
     try {
+      // Hacemos la petición POST al backend
       const response = await axios.post('http://localhost:5000/api/usuarios/login', {
         'nick-name': nickname,
         password: password,
-        // Nota: No enviamos el 'rol', el backend lo determina
+        rol: rol // <-- CAMBIO CLAVE: Ahora sí enviamos el rol
       });
 
-      // --- Cambios Principales Aquí ---
+      // Si el login es exitoso
       console.log('Login exitoso:', response.data);
       const token = response.data.token;
 
-      // 1. Guardar el token en el almacenamiento local del navegador
+      // 1. Guardar el token
       localStorage.setItem('authToken', token);
 
-      // 2. Redirigir al usuario al dashboard
-      router.push('/dashboard'); // <-- Cambio: Redirigimos a la nueva página
+      // 2. Redirigir al dashboard
+      router.push('/dashboard');
 
     } catch (err) {
       console.error('Error en el login:', err.response?.data?.message || 'Error desconocido');
@@ -43,8 +44,6 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        
-        {/* El resto del formulario (h1, h2, form, inputs, etc.) se mantiene igual */}
         
         <h1 className="text-center text-2xl font-bold text-gray-900">
           Bienvenido al Sistema de Inventario
@@ -57,6 +56,7 @@ export default function LoginPage() {
         </p>
 
         <form onSubmit={handleSubmit}>
+          {/* ... (El resto del formulario se mantiene igual) ... */}
           <div className="mb-4">
             <label htmlFor="rol" className="mb-2 block font-semibold text-gray-700">
               Seleccionar Rol
