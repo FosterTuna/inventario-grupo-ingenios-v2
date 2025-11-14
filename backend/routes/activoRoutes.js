@@ -4,42 +4,42 @@ const Activo = require('../models/Activo'); // Importamos el modelo Activo
 const auth = require('../middleware/auth');   // Importamos el middleware de autenticación
 
 // --- OBTENER TODOS LOS ACTIVOS (Ruta Protegida) ---
-router.get('/', auth, async (req, res) => { // 'auth' protege la ruta
+router.get('/', auth, async (req, res) => {
   try {
-    const activos = await Activo.find(); // Busca todos los activos
-    res.json(activos); // Devuelve la lista
+    const activos = await Activo.find();
+    res.json(activos);
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener activos: ' + error.message });
   }
 });
 
 // --- CREAR UN NUEVO ACTIVO (Ruta Protegida) ---
-router.post('/', auth, async (req, res) => { // 'auth' protege la ruta
+router.post('/', auth, async (req, res) => {
+  // Solo roles con permiso pueden crear
+  if (req.user.rol !== 'Jefe' && req.user.rol !== 'Sub-jefe' && req.user.rol !== 'Encargado') {
+    return res.status(403).json({ message: 'No tienes permiso para crear activos.' });
+  }
+
   const { nombre, sku, tipo_activo, stock_total } = req.body;
 
-  // Validación básica
-  if (!nombre || !sku || !tipo_activo || stock_total == null) { // Verifica campos obligatorios
+  if (!nombre || !sku || !tipo_activo || stock_total == null) {
     return res.status(400).json({ message: 'Por favor, proporciona todos los campos requeridos (nombre, sku, tipo_activo, stock_total).' });
   }
 
   try {
-    // Crea una nueva instancia del modelo Activo
     const nuevoActivo = new Activo({
-      ...req.body, // Incluye todos los datos enviados
-      stock_disponible: stock_total // Al crear, el stock disponible es igual al total
+      ...req.body,
+      stock_disponible: stock_total
     });
 
-    // Guarda el nuevo activo en la base de datos
     const savedActivo = await nuevoActivo.save();
-    res.status(201).json(savedActivo); // Responde con el activo creado y estado 201 (Creado)
+    res.status(201).json(savedActivo);
   } catch (error) {
-    // Maneja errores (como SKU duplicado)
     res.status(400).json({ message: 'Error al crear activo: ' + error.message });
   }
 });
 
 // --- OBTENER UN ACTIVO ESPECÍFICO POR ID (Ruta Protegida) ---
-// ----- ¡ESTA ES LA RUTA QUE FALTABA! -----
 router.get('/:id', auth, async (req, res) => {
   try {
     const activo = await Activo.findById(req.params.id);
@@ -48,13 +48,50 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Activo no encontrado.' });
     }
     
-    res.json(activo); // Devuelve el activo encontrado
+    res.json(activo);
     
   } catch (error) {
-    // Maneja errores (ej. un ID mal formateado)
     res.status(500).json({ message: 'Error al obtener el activo: ' + error.message });
+  }
+});
+
+// --- RUTA: ACTUALIZAR UN ACTIVO (Ruta Protegida) ---
+// ----- ¡ESTA ES LA RUTA NUEVA! -----
+router.put('/:id', auth, async (req, res) => {
+  // Verificamos permisos (solo roles autorizados pueden editar)
+  if (req.user.rol !== 'Jefe' && req.user.rol !== 'Sub-jefe' && req.user.rol !== 'Encargado') {
+    return res.status(403).json({ message: 'No tienes permiso para editar activos.' });
+  }
+
+  try {
+    const activoId = req.params.id;
+    const updates = req.body;
+
+    // No permitimos que se actualice el stock directamente desde esta ruta
+    // El stock solo debe cambiar con los movimientos de entrada/salida
+    delete updates.stock_disponible;
+
+    // Buscamos y actualizamos el activo
+    const updatedActivo = await Activo.findByIdAndUpdate(
+      activoId,
+      updates,
+      { new: true, runValidators: true } // {new: true} devuelve el documento actualizado
+    );
+
+    if (!updatedActivo) {
+      return res.status(404).json({ message: 'Activo no encontrado.' });
+    }
+
+    res.json(updatedActivo); // Devuelve el activo actualizado
+
+  } catch (error) {
+    // Maneja errores (ej. SKU duplicado)
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Ese SKU ya está en uso por otro activo.' });
+    }
+    res.status(500).json({ message: 'Error al actualizar el activo: ' + error.message });
   }
 });
 // ----- FIN DE LA RUTA NUEVA -----
 
-module.exports = router; // Exporta el router
+module.exports = router;
