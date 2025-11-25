@@ -3,12 +3,9 @@
 
 import { useState } from 'react';
 import axios from 'axios';
-// <-- CAMBIO: Ya no importamos 'useActivos' porque no lo necesitamos aquí
+import { useActivos } from '../context/ActivosContext'; 
 
-// Recibe 'onClose', 'onActivoUpdated' (la función para refrescar) y el 'activo'
 export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
-  
-  // ... (Los estados [nombre, sku, etc.] se mantienen igual) ...
   const [nombre, setNombre] = useState(activo.nombre);
   const [sku, setSku] = useState(activo.sku);
   const [tipo_activo, setTipoActivo] = useState(activo.tipo_activo);
@@ -16,16 +13,30 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
   const [descripcion, setDescripcion] = useState(activo.descripcion || '');
   const [bodega, setBodega] = useState(activo.ubicacion?.bodega || '');
   const [estante, setEstante] = useState(activo.ubicacion?.estante || '');
+  const [estado_actual, setEstadoActual] = useState(activo.estado_actual);
   const [error, setError] = useState('');
+  
+  // Lista de bodegas fija
+  const bodegasFijas = [
+    'Bodega HBB',
+    'Bodega de la Oficina',
+    'Bodega de la Clínica'
+  ];
+  // --- FIN DE LISTA ---
+
+  const { fetchActivos } = useActivos();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!nombre || !sku || !stock_total || !bodega || !estante) {
-      setError('Por favor, llena todos los campos obligatorios.');
+    // --- CAMBIO: Validamos que se haya seleccionado una bodega no vacía ---
+    if (!nombre || !sku || !stock_total || !bodega || !estante || bodega === '') { 
+      setError('Por favor, selecciona una Bodega y llena todos los demás campos obligatorios.');
       return;
     }
+    // --- FIN DE CAMBIO ---
+
 
     try {
       const token = localStorage.getItem('authToken');
@@ -40,17 +51,23 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
         tipo_activo,
         stock_total: Number(stock_total),
         descripcion,
-        ubicacion: { bodega, estante }
+        ubicacion: { bodega, estante },
+        estado_actual: estado_actual
       };
 
       await axios.put(`http://localhost:5000/api/activos/${activo._id}`, updatedData, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      // --- CAMBIO CLAVE AQUÍ ---
-      onActivoUpdated(); // 1. Llama a la función de refresco que nos pasó la página
-      onClose();         // 2. Cierra el modal
-      // --- FIN DEL CAMBIO ---
+      if (onActivoUpdated) {
+        onActivoUpdated();
+      }
+      //const { fetchActivos } = useActivos();
+      if (fetchActivos) {
+        await fetchActivos();
+      }
+      
+      onClose();
 
     } catch (err) {
       console.error(err);
@@ -63,14 +80,14 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
   };
 
   return (
-    // El resto del JSX del modal (el formulario) es exactamente el mismo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Editar Activo</h2>
         
         <form onSubmit={handleSubmit}>
           <div className="max-h-96 overflow-y-auto pr-2">
-            {/* ... (Campos del formulario: SKU, Nombre, etc. se mantienen igual) ... */}
+            
+            {/* SKU y Nombre */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label htmlFor="sku" className="block text-sm font-medium text-gray-700">SKU*</label>
@@ -95,6 +112,8 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
                 />
               </div>
             </div>
+    
+            {/* Tipo y Stock Total */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label htmlFor="tipo_activo" className="block text-sm font-medium text-gray-700">Tipo*</label>
@@ -120,17 +139,36 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
                 />
               </div>
             </div>
+
+            {/* Campo de Estado */}
+            <div className="mb-4">
+              <label htmlFor="estado_actual" className="block text-sm font-medium text-gray-700">Estado*</label>
+              <select
+                id="estado_actual"
+                value={estado_actual}
+                onChange={(e) => setEstadoActual(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 text-gray-900 shadow-sm sm:text-sm"
+              >
+                <option value="Disponible">Disponible</option>
+                <option value="En Uso">En Uso</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+              </select>
+            </div>
+
+            {/* --- CAMBIO: SELECT DE BODEGA --- */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label htmlFor="bodega" className="block text-sm font-medium text-gray-700">Bodega*</label>
-                <input
-                  type="text"
+                <select 
                   id="bodega"
                   value={bodega}
                   onChange={(e) => setBodega(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 text-gray-900 shadow-sm sm:text-sm"
                   required
-                />
+                >
+                  <option value="">Selecciona una bodega...</option>
+                  {bodegasFijas.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
               </div>
               <div>
                 <label htmlFor="estante" className="block text-sm font-medium text-gray-700">Estante*</label>
@@ -144,6 +182,9 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
                 />
               </div>
             </div>
+            {/* --- FIN DEL CAMBIO --- */}
+    
+            {/* Descripción */}
             <div className="mb-4">
               <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
               <textarea
@@ -155,7 +196,7 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
               ></textarea>
             </div>
           </div>
-          
+    
           {error && (
             <p className="my-2 text-center text-sm text-red-600">{error}</p>
           )}

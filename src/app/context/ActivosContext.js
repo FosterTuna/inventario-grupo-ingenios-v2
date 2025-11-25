@@ -12,21 +12,39 @@ export function ActivosProvider({ children }) {
   const [error, setError] = useState(null);
   const router = useRouter();
 
-  // --- NUEVO: ESTADO PARA EL MODAL DE MOVIMIENTO ---
   const [isMovModalOpen, setIsMovModalOpen] = useState(false);
   const [selectedActivo, setSelectedActivo] = useState(null);
+  
+  // --- CAMBIOS AQUÍ: Añadimos estados para los filtros ---
+  const [search, setSearch] = useState('');
+  const [estado, setEstado] = useState('');
+  const [tipo, setTipo] = useState('');
+  const [bodega, setBodega] = useState('');
+  const [estante, setEstante] = useState(''); // <-- CAMBIO: Añadido 'estante'
+  // --- FIN DE CAMBIOS ---
 
+  // --- CAMBIO: fetchActivos ahora usa los 5 filtros ---
   const fetchActivos = useCallback(async () => {
-    // No ponemos setLoading(true) aquí para que la tabla no parpadee
+    setLoading(true);
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
         router.push('/');
         return;
       }
+      
+      const params = {};
+      if (search) params.search = search;
+      if (estado) params.estado = estado;
+      if (tipo) params.tipo_activo = tipo;
+      if (bodega) params.bodega = bodega; // <-- Corregido para que coincida con el backend
+      if (estante) params.estante = estante; // <-- CAMBIO: Añadido 'estante'
+
       const response = await axios.get('http://localhost:5000/api/activos', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        params: params
       });
+      
       setActivos(response.data);
       setError(null);
     } catch (err) {
@@ -36,37 +54,43 @@ export function ActivosProvider({ children }) {
         router.push('/');
       }
     } finally {
-      setLoading(false); // Ponemos loading false solo al final
+      setLoading(false);
     }
-  }, [router]);
+  }, [router, search, estado, tipo, bodega, estante]); // <-- CAMBIO: Añadido 'estante'
+  // --- FIN DE CAMBIOS ---
 
   useEffect(() => {
-    fetchActivos(); // Carga inicial
+    fetchActivos();
   }, [fetchActivos]);
 
-  // --- NUEVAS FUNCIONES PARA EL MODAL ---
+  // ... (openMovModal y closeMovModal se mantienen igual) ...
   const openMovModal = (activo) => {
     setSelectedActivo(activo);
     setIsMovModalOpen(true);
   };
-
   const closeMovModal = () => {
     setIsMovModalOpen(false);
     setSelectedActivo(null);
-    fetchActivos(); // Refresca la tabla al cerrar
+    fetchActivos();
   };
 
-  // Valores que compartirá el contexto
+  // --- CAMBIO: Exponemos los filtros y sus 'setters' ---
   const value = {
     activos,
     loading,
     error,
-    fetchActivos, // El modal de "Agregar" también usa esto
+    fetchActivos,
     isMovModalOpen,
     selectedActivo,
-    openMovModal, // La tabla usa esto
-    closeMovModal // El layout usa esto
+    openMovModal,
+    closeMovModal,
+    search, setSearch,
+    estado, setEstado,
+    tipo, setTipo,
+    bodega, setBodega,
+    estante, setEstante // <-- CAMBIO: Añadido 'estante'
   };
+  // --- FIN DE CAMBIOS ---
 
   return (
     <ActivosContext.Provider value={value}>
@@ -75,7 +99,6 @@ export function ActivosProvider({ children }) {
   );
 }
 
-// Hook personalizado
 export function useActivos() {
   return useContext(ActivosContext);
 }

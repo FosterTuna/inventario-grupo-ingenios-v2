@@ -3,11 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useActivos } from '../context/ActivosContext';
+import { useActivos } from '../context/ActivosContext'; // <-- Importamos el contexto
 
 // El modal ahora recibe 'onClose' y 'activo' (el activo seleccionado)
 export default function RegistrarMovimientoModal({ onClose, activo }) {
-  const { fetchActivos } = useActivos(); // Para refrescar la tabla
+  // Obtenemos la función fetchActivos del contexto para refrescar la tabla principal
+  const { fetchActivos } = useActivos(); // <-- CAMBIO
 
   // Estados para el formulario
   const [usuarios, setUsuarios] = useState([]); // Lista de usuarios para el dropdown
@@ -35,7 +36,7 @@ export default function RegistrarMovimientoModal({ onClose, activo }) {
       }
     };
     fetchUsuarios();
-  }, []); // Se ejecuta solo una vez cuando el modal se monta
+  }, []);
 
   // --- Maneja el envío del formulario ---
   const handleSubmit = async (e) => {
@@ -46,7 +47,7 @@ export default function RegistrarMovimientoModal({ onClose, activo }) {
       setError('Por favor, selecciona un usuario y una cantidad válida.');
       return;
     }
-
+    
     if (cantidad > activo.stock_disponible) {
       setError('No puedes registrar una salida mayor al stock disponible.');
       return;
@@ -61,13 +62,14 @@ export default function RegistrarMovimientoModal({ onClose, activo }) {
         observaciones: observaciones
       };
 
-      // Hacemos el POST al backend
+      // 1. Hacemos el POST al backend
       await axios.post('http://localhost:5000/api/movimientos/salida', body, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      await fetchActivos(); // Refrescamos la tabla de activos
-      onClose(); // Cerramos el modal
+      // 2. Forzamos el refresco de la tabla principal
+      await fetchActivos(); 
+      onClose(); // 3. Cerramos el modal
 
     } catch (err) {
       console.error(err);
@@ -82,7 +84,7 @@ export default function RegistrarMovimientoModal({ onClose, activo }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Registrar Salida de Activo</h2>
-
+        
         {/* Información del Activo (solo lectura) */}
         <div className="mb-4 rounded-md bg-gray-50 p-4">
           <p className="font-medium text-gray-900">{activo.nombre}</p>
@@ -91,6 +93,7 @@ export default function RegistrarMovimientoModal({ onClose, activo }) {
         </div>
 
         <form onSubmit={handleSubmit}>
+          {/* ... (El resto del formulario se mantiene igual) ... */}
           <div className="mb-4">
             <label htmlFor="usuario_dispone" className="block text-sm font-medium text-gray-700">Usuario que Recibe (Dispone)*</label>
             <select
@@ -118,7 +121,7 @@ export default function RegistrarMovimientoModal({ onClose, activo }) {
               onChange={(e) => setCantidad(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 text-gray-900 shadow-sm sm:text-sm"
               min="1"
-              max={activo.stock_disponible} // No permite poner más del stock
+              max={activo.stock_disponible}
               required
             />
           </div>
@@ -139,19 +142,8 @@ export default function RegistrarMovimientoModal({ onClose, activo }) {
           )}
 
           <div className="mt-6 flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
-              Confirmar Salida
-            </button>
+            <button type="button" onClick={onClose} className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+            <button type="submit" className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">Confirmar Salida</button>
           </div>
         </form>
       </div>

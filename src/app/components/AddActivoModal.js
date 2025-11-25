@@ -6,7 +6,6 @@ import axios from 'axios';
 import { useActivos } from '../context/ActivosContext';
 
 export default function AddActivoModal({ onClose }) {
-  // ... (Los estados se mantienen igual) ...
   const [nombre, setNombre] = useState('');
   const [sku, setSku] = useState('');
   const [tipo_activo, setTipoActivo] = useState('Herramienta');
@@ -16,16 +15,26 @@ export default function AddActivoModal({ onClose }) {
   const [estante, setEstante] = useState('');
   const [error, setError] = useState('');
 
+  // --- LISTA DE BODEGAS FIJAS ---
+  const bodegasFijas = [
+    'Bodega HBB',
+    'Bodega de la Oficina',
+    'Bodega de la Clínica'
+  ];
+  // --- FIN DE LISTA ---
+
   const { fetchActivos } = useActivos();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!nombre || !sku || !stock_total || !bodega || !estante) {
-      setError('Por favor, llena todos los campos obligatorios.');
+    // --- CAMBIO: Validamos que se haya seleccionado una bodega no vacía ---
+    if (!nombre || !sku || !stock_total || !bodega || !estante || bodega === '') { 
+      setError('Por favor, selecciona una Bodega y llena todos los demás campos obligatorios.');
       return;
     }
+    // --- FIN DE CAMBIO ---
 
     try {
       const token = localStorage.getItem('authToken');
@@ -51,29 +60,23 @@ export default function AddActivoModal({ onClose }) {
       onClose();
 
     } catch (err) {
-      console.error(err); // Mantenemos el error completo en consola para depuración
-
-      // --- CAMBIO CLAVE AQUÍ ---
-      // Verificamos si el mensaje de error del backend contiene el código 'E11000'
+      console.error(err);
       if (err.response?.data?.message && err.response.data.message.includes('E11000')) {
-        // Si es así, mostramos tu mensaje personalizado
         setError('Este SKU ya existe. Por favor, usa un identificador diferente.');
       } else {
-        // Para cualquier otro error, mostramos el mensaje genérico
         setError(err.response?.data?.message || 'Error al crear el activo.');
       }
-      // --- FIN DEL CAMBIO ---
     }
   };
 
   return (
-    // El resto del JSX del modal (el formulario) es exactamente el mismo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Agregar Herramienta / Material</h2>
         
         <form onSubmit={handleSubmit}>
           <div className="max-h-96 overflow-y-auto pr-2">
+            
             {/* SKU y Nombre */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
@@ -127,18 +130,20 @@ export default function AddActivoModal({ onClose }) {
               </div>
             </div>
 
-            {/* Ubicación */}
+            {/* --- CAMBIO: SELECT DE BODEGA --- */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label htmlFor="bodega" className="block text-sm font-medium text-gray-700">Bodega*</label>
-                <input
-                  type="text"
+                <select 
                   id="bodega"
                   value={bodega}
                   onChange={(e) => setBodega(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 text-gray-900 shadow-sm sm:text-sm"
                   required
-                />
+                >
+                  <option value="">Selecciona una bodega...</option>
+                  {bodegasFijas.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
               </div>
               <div>
                 <label htmlFor="estante" className="block text-sm font-medium text-gray-700">Estante*</label>
@@ -152,7 +157,8 @@ export default function AddActivoModal({ onClose }) {
                 />
               </div>
             </div>
-
+            {/* --- FIN DEL CAMBIO --- */}
+    
             {/* Descripción */}
             <div className="mb-4">
               <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
@@ -166,12 +172,10 @@ export default function AddActivoModal({ onClose }) {
             </div>
           </div>
 
-          {/* Mensaje de Error */}
           {error && (
             <p className="my-2 text-center text-sm text-red-600">{error}</p>
           )}
 
-          {/* Botones de Acción */}
           <div className="mt-6 flex justify-end space-x-4">
             <button
               type="button"
