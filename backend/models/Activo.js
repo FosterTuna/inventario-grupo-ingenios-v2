@@ -17,10 +17,13 @@ const activoSchema = new Schema({
     required: true,
     unique: true // El SKU debe ser único
   },
-  descripcion: {
-    type: String
-  },
+  // --- CAMBIO: Campo para la URL de la imagen ---
   imagen_url: {
+    type: String,
+    required: false // Es opcional
+  },
+  // ---------------------------------------------
+  descripcion: {
     type: String
   },
   stock_total: {

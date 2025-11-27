@@ -22,7 +22,6 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
     'Bodega de la Oficina',
     'Bodega de la Clínica'
   ];
-  // --- FIN DE LISTA ---
 
   const { fetchActivos } = useActivos();
 
@@ -31,7 +30,7 @@ export default function EditActivoModal({ onClose, onActivoUpdated, activo }) {
     setError('');
 
     // --- CAMBIO: Validamos que se haya seleccionado una bodega no vacía ---
-    if (!nombre || !sku || !stock_total || !bodega || !estante || bodega === '') { 
+    if (!nombre || !sku || !stock_total || !estante || bodega === '') { 
       setError('Por favor, selecciona una Bodega y llena todos los demás campos obligatorios.');
       return;
     }

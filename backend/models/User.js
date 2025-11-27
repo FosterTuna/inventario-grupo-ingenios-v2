@@ -1,20 +1,21 @@
+// backend/models/User.js (CORREGIDO)
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
   id_empresa: {
     type: Schema.Types.ObjectId,
-    ref: 'Empresa', // Esto es opcional por ahora, pero bueno para el futuro
-    // required: true // Puedes hacerlo requerido más adelante si necesitas vincular empresas
+    ref: 'Empresa',
+    // required: true
   },
   nombre_completo: {
     type: String,
     required: true
   },
-  'nick-name': { // Se usan comillas porque el nombre contiene un guion
+  'nick-name': {
     type: String,
     required: true,
-    unique: true // Asegura que no haya nicknames duplicados
+    unique: true
   },
   password: {
     type: String,
@@ -23,17 +24,18 @@ const userSchema = new Schema({
   rol: {
     type: String,
     required: true,
-    enum: ['Jefe', 'Sub-jefe', 'Encargado', 'Practicante', 'Trabajador'] // Define los roles válidos
+    // --- CORRECCIÓN CLAVE AQUÍ: Aseguramos que 'Sub-Jefe' (con mayúscula) sea un valor válido ---
+    enum: ['Jefe', 'Sub-Jefe', 'Encargado', 'Practicante', 'Trabajador'] 
   },
   activo: {
     type: Boolean,
-    default: true // Los usuarios empiezan activos por defecto
+    default: true
   },
   firma: {
     type: String,
-    // required: true // Puedes hacerlo requerido más adelante
+    // required: true
   }
-}, { timestamps: true }); // timestamps añade createdAt y updatedAt automáticamente
+}, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 

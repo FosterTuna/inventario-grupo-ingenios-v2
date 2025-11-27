@@ -15,9 +15,27 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// --- RUTA: CREAR UN NUEVO USUARIO ---
-router.post('/', async (req, res) => {
+// --- RUTA: CREAR UN NUEVO USUARIO (CON REGLAS DE JERARQUÍA) ---
+router.post('/', auth, async (req, res) => {
   try {
+    const rolSolicitante = req.user.rol; // Quién intenta crear
+    const rolNuevoUsuario = req.body.rol; // Qué rol intenta crear
+
+    // 1. REGLA: Encargados, Practicantes y Trabajadores NO pueden agregar usuarios
+    if (rolSolicitante !== 'Jefe' && rolSolicitante !== 'Sub-Jefe') {
+      return res.status(403).json({ 
+        message: 'Acceso denegado. Solo Jefes y Sub-Jefes pueden crear usuarios.' 
+      });
+    }
+
+    // 2. REGLA: El Sub-Jefe NO puede crear un usuario con rol de "Jefe"
+    if (rolSolicitante === 'Sub-Jefe' && rolNuevoUsuario === 'Jefe') {
+      return res.status(403).json({ 
+        message: 'Permiso denegado. Un Sub-Jefe no puede crear un usuario con rol de Jefe.' 
+      });
+    }
+
+    // Si pasa las validaciones, procedemos a crear
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
@@ -30,108 +48,108 @@ router.post('/', async (req, res) => {
 
     const savedUser = await newUser.save();
     res.status(201).json(savedUser);
+
   } catch (error) {
+    if (error.code === 11000) {
+        return res.status(400).json({ message: 'Ese nick-name ya existe. Por favor elige otro.' });
+    }
     res.status(400).json({ message: 'Error al crear usuario: ' + error.message });
   }
 });
 
-// --- RUTA: INICIAR SESIÓN (LOGIN) --- (MODIFICADA)
+// --- RUTA: INICIAR SESIÓN (LOGIN) ---
 router.post('/login', async (req, res) => {
   try {
-    // 1. Obtenemos los 3 campos del formulario
     const { 'nick-name': nickname, password, rol } = req.body;
 
-    // 2. Validamos que el usuario exista por su nick-name
+    // 1. Buscar usuario
     const user = await User.findOne({ 'nick-name': nickname });
-    if (!user) {
-      // Si el nick-name no existe, enviamos este error
-      return res.status(400).json({ message: 'Nick-name o contraseña incorrectos' });
-    }
+    if (!user) return res.status(400).json({ message: 'Nick-name o contraseña incorrectos' });
 
-    // 3. (NUEVO) Validamos que el rol sea el correcto
+    // 2. Validar que el rol seleccionado coincida con el de la BD
     if (user.rol !== rol) {
-      // Si el nick-name es correcto pero el rol no, enviamos tu error personalizado
       return res.status(403).json({ message: `Este usuario no tiene permisos de ${rol}` });
     }
 
-    // 4. Validamos la contraseña (solo si el usuario y el rol fueron correctos)
+    // 3. Validar contraseña
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      // Si la contraseña es incorrecta, enviamos este error
-      return res.status(400).json({ message: 'Nick-name o contraseña incorrectos' });
-    }
+    if (!isMatch) return res.status(400).json({ message: 'Nick-name o contraseña incorrectos' });
 
-    // 5. Si todo está bien, creamos y firmamos el Token
-    const payload = {
-      id: user._id,
-      rol: user.rol
-    };
-
+    // 4. Generar Token
+    const payload = { id: user._id, rol: user.rol };
     const token = jwt.sign(
       payload,
       'UNA_CLAVE_SECRETA_MUY_DIFICIL_DE_ADIVINAR',
       { expiresIn: '1h' }
     );
 
-    res.json({
-      message: '¡Login exitoso!',
-      token: token
-    });
+    // Enviamos también el rol al frontend para ayudar a ocultar botones
+    res.json({ message: '¡Login exitoso!', token, rol: user.rol });
 
   } catch (error) {
-    res.status(500).json({ message: 'Error en el servidor durante el login: ' + error.message });
+    res.status(500).json({ message: 'Error en el servidor: ' + error.message });
   }
 });
 
-// --- RUTA: ELIMINAR UN USUARIO (Protegida) ---
+// --- RUTA: ELIMINAR UN USUARIO (CON REGLAS DE JERARQUÍA) ---
 router.delete('/:id', auth, async (req, res) => {
-  // ... (El resto del código de eliminar se mantiene igual) ...
-  if (req.user.rol !== 'Jefe' && req.user.rol !== 'Sub-jefe') {
+  const rolSolicitante = req.user.rol;
+
+  // 1. REGLA: Solo Jefes y Sub-Jefes pueden eliminar
+  if (rolSolicitante !== 'Jefe' && rolSolicitante !== 'Sub-Jefe') {
     return res.status(403).json({ message: 'No tienes permiso para eliminar usuarios.' });
   }
+
   try {
-    const userId = req.params.id;
-    const userToDelete = await User.findById(userId);
-    if (!userToDelete) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    const userToDelete = await User.findById(req.params.id);
+    if (!userToDelete) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+    // 2. REGLA: Nadie puede borrar a un Jefe (ni siquiera otro Jefe por seguridad básica, o el Sub-Jefe)
+    // Si quieres que un Jefe sí pueda borrar a otro Jefe, quita la condición "rolSolicitante !== 'Jefe'"
+    if (userToDelete.rol === 'Jefe' && rolSolicitante !== 'Jefe') {
+      return res.status(403).json({ message: 'No tienes permisos para eliminar a un Jefe.' });
     }
-    if (userToDelete.rol === 'Jefe') {
-      return res.status(400).json({ message: 'No se puede eliminar a un usuario con rol de Jefe.' });
-    }
-    await User.deleteOne({ _id: userId });
+
+    await User.deleteOne({ _id: req.params.id });
     res.json({ message: 'Usuario eliminado correctamente.' });
+
   } catch (error) {
-    res.status(500).json({ message: 'Error al eliminar el usuario: ' + error.message });
+    res.status(500).json({ message: 'Error al eliminar: ' + error.message });
   }
 });
 
-// --- RUTA: ACTUALIZAR UN USUARIO (Protegida) ---
+// --- RUTA: ACTUALIZAR UN USUARIO (CON REGLAS DE JERARQUÍA) ---
 router.put('/:id', auth, async (req, res) => {
-  // ... (El resto del código de actualizar se mantiene igual) ...
-  if (req.user.rol !== 'Jefe' && req.user.rol !== 'Sub-jefe') {
+  const rolSolicitante = req.user.rol;
+  const updates = req.body;
+
+  // 1. REGLA: Solo Jefes y Sub-Jefes pueden editar
+  if (rolSolicitante !== 'Jefe' && rolSolicitante !== 'Sub-Jefe') {
     return res.status(403).json({ message: 'No tienes permiso para editar usuarios.' });
   }
+
   try {
-    const userId = req.params.id;
-    const updates = req.body;
-    const userToEdit = await User.findById(userId);
-    if (!userToEdit) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    const userToEdit = await User.findById(req.params.id);
+    if (!userToEdit) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+    // 2. REGLA: Un Sub-Jefe no puede editar a un Jefe
+    if (userToEdit.rol === 'Jefe' && rolSolicitante !== 'Jefe') {
+        return res.status(403).json({ message: 'No tienes permisos para editar a un Jefe.' });
     }
-    if (userToEdit.rol === 'Jefe' && updates.rol !== 'Jefe') {
-      return res.status(400).json({ message: 'No se puede cambiar el rol de un Jefe.' });
+
+    // 3. REGLA: No se puede "promover" a alguien a Jefe si no eres Jefe
+    if (updates.rol === 'Jefe' && rolSolicitante !== 'Jefe') {
+        return res.status(403).json({ message: 'Solo un Jefe puede asignar el rol de Jefe.' });
     }
-    if (userToEdit.rol === 'Jefe' && req.user.rol !== 'Jefe') {
-        return res.status(403).json({ message: 'Un Sub-Jefe no puede editar a un Jefe.' });
-    }
-    delete updates.password; 
-    const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
+
+    delete updates.password; // Seguridad: no editar contraseña por aquí
+    
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, { new: true });
     res.json(updatedUser);
+
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Ese nick-name ya está en uso por otro usuario.' });
-    }
-    res.status(500).json({ message: 'Error al actualizar el usuario: ' + error.message });
+    if (error.code === 11000) return res.status(400).json({ message: 'Ese nick-name ya está en uso.' });
+    res.status(500).json({ message: 'Error al actualizar: ' + error.message });
   }
 });
 

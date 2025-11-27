@@ -7,7 +7,7 @@ import { ActivosProvider, useActivos } from '../context/ActivosContext';
 import AddActivoModal from '../components/AddActivoModal';
 import RegistrarMovimientoModal from '../components/RegistrarMovimientoModal';
 
-// --- COMPONENTE SIDEBAR (MODIFICADO) ---
+// --- COMPONENTE SIDEBAR (BARRA LATERAL) ---
 function Sidebar({ onOpenModal }) {
   const router = useRouter();
   const { 
@@ -17,13 +17,11 @@ function Sidebar({ onOpenModal }) {
     estante, setEstante
   } = useActivos();
 
-  // --- LISTA DE BODEGAS FIJAS ---
   const bodegasFijas = [
     'Bodega HBB',
     'Bodega de la Oficina',
     'Bodega de la Clínica'
   ];
-  // --- FIN DE LISTA ---
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -37,7 +35,7 @@ function Sidebar({ onOpenModal }) {
       </div>
       
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Vínculos y Botón Agregar... (sin cambios) */}
+        {/* Vínculos de Navegación */}
         <a href="/dashboard" className="mb-2 flex items-center rounded-lg px-4 py-2 text-gray-600 hover:bg-gray-100">
           <span className="font-medium">Inventario General</span>
         </a>
@@ -49,17 +47,20 @@ function Sidebar({ onOpenModal }) {
           + Agregar Herramienta / Material
         </button>
 
-        {/* --- FILTROS EN LA BARRA LATERAL --- */}
+        {/* --- FILTROS AÑADIDOS A LA BARRA LATERAL --- */}
         <div className="mt-6 border-t pt-4">
           <h3 className="mb-3 px-4 text-xs font-semibold uppercase text-gray-500">Filtros de Inventario</h3>
           
           <div className="space-y-3">
+            
+            {/* Tipo */}
             <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900">
               <option value="">Todos los Tipos</option>
               <option value="Herramienta">Herramienta</option>
               <option value="Material">Material</option>
             </select>
             
+            {/* Estado */}
             <select value={estado} onChange={(e) => setEstado(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900">
               <option value="">Todos los Estados</option>
               <option value="Disponible">Disponible</option>
@@ -67,17 +68,17 @@ function Sidebar({ onOpenModal }) {
               <option value="Mantenimiento">Mantenimiento</option>
             </select>
             
-            {/* --- SELECT DE BODEGAS (ACTUALIZADO) --- */}
+            {/* Bodegas */}
             <select 
               value={bodega} 
               onChange={(e) => setBodega(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
             >
-              <option value="">Todas las Bodegas</option> {/* Opción de filtro */}
+              <option value="">Todas las Bodegas</option> 
               {bodegasFijas.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
-            {/* --- FIN SELECT DE BODEGAS --- */}
-
+            
+            {/* Estante */}
             <input
               type="text"
               placeholder="Buscar por estante..."
@@ -87,6 +88,9 @@ function Sidebar({ onOpenModal }) {
             />
           </div>
         </div>
+        {/* --- FIN DE FILTROS --- */}
+        
+        {/* --- ANTES ESTABA AQUÍ EL VÍNCULO A HISTORIAL, AHORA ESTÁ EN LA PÁGINA --- */}
       </div>
 
       <div className="border-t p-4">

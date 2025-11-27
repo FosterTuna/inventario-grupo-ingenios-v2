@@ -1,4 +1,4 @@
-// app/dashboard/activos/[id]/page.js
+// src/app/dashboard/activos/[id]/page.js
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -6,20 +6,22 @@ import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
 import EditActivoModal from '../../../components/EditActivoModal';
-import RegistrarEntradaModal from '../../../components/RegistrarEntradaModal'; // <-- Importado
+import RegistrarEntradaModal from '../../../components/RegistrarEntradaModal';
 
 export default function ActivoDetallePage() {
   const [activo, setActivo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Estados para los modales
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isEntradaModalOpen, setIsEntradaModalOpen] = useState(false); // <-- Estado para el modal de entrada
+  const [isEntradaModalOpen, setIsEntradaModalOpen] = useState(false);
   
   const params = useParams();
   const router = useRouter();
   const { id } = params;
 
-  // ... (fetchActivoDetalle se mantiene igual) ...
+  // --- Función para cargar los datos del activo ---
   const fetchActivoDetalle = useCallback(async () => {
     setLoading(true);
     try {
@@ -46,32 +48,46 @@ export default function ActivoDetallePage() {
     if (id) fetchActivoDetalle();
   }, [id, fetchActivoDetalle]);
 
-  // Función de refresco (para el modal de edición y entrada)
+  // --- Manejadores de eventos ---
   const handleActivoUpdated = () => {
     setIsEditModalOpen(false);
-    setIsEntradaModalOpen(false); // Cierra el modal de entrada también
-    fetchActivoDetalle();
+    setIsEntradaModalOpen(false);
+    fetchActivoDetalle(); // Recarga la información actualizada
   };
 
-  const handleDelete = async () => { /* ... (Lógica de eliminar se mantiene igual) ... */
+  const handleDelete = async () => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar este activo? Esta acción no se puede deshacer.')) return;
     try {
       const token = localStorage.getItem('authToken');
-      await axios.delete(`http://localhost:5000/api/activos/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      await axios.delete(`http://localhost:5000/api/activos/${id}`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
       alert('Activo eliminado correctamente.');
       router.push('/dashboard'); 
     } catch (err) {
       alert(err.response?.data?.message || 'Error al eliminar el activo.');
     }
   };
-  // --- FIN DE FUNCIÓN PARA ELIMINAR ---
 
+  const handleMaintenance = async () => {
+      if (!window.confirm('¿Confirmas enviar este activo al área de Mantenimiento?')) return;
+      try {
+          const token = localStorage.getItem('authToken');
+          await axios.put(`http://localhost:5000/api/activos/${id}`, 
+              { estado_actual: 'Mantenimiento' },
+              { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          fetchActivoDetalle(); 
+      } catch (err) {
+          alert(err.response?.data?.message || 'Error al enviar a mantenimiento.');
+      }
+  };
 
+  // --- Renderizado ---
   if (loading) return <div className="text-gray-900 text-center p-10">Cargando detalles...</div>;
   if (error) return <div className="text-red-600 text-center p-10">{error}</div>;
   if (!activo) return <div className="text-gray-900 text-center p-10">Activo no encontrado.</div>;
 
-  // Determinamos si hay items fuera de bodega para mostrar el botón de devolución
   const itemsFuera = activo.stock_total - activo.stock_disponible;
 
   return (
@@ -82,15 +98,24 @@ export default function ActivoDetallePage() {
           <h1 className="text-3xl font-bold">{activo.nombre}</h1>
           <div className="flex gap-4">
             
-            {/* BOTÓN EDITAR */}
             <button
               onClick={() => setIsEditModalOpen(true)}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               Editar Activo
             </button>
+
+            {/* Botón Mantenimiento (solo si no está ya en mantenimiento) */}
+            {activo.estado_actual !== 'Mantenimiento' && (
+                <button
+                    onClick={handleMaintenance}
+                    className="rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700"
+                >
+                    Enviar a Mantenimiento
+                </button>
+            )}
             
-            {/* --- BOTÓN DE DEVOLUCIÓN (ENTRADA) --- */}
+            {/* Botón Devolución (solo si hay items fuera) */}
             {itemsFuera > 0 && (
                 <button
                     onClick={() => setIsEntradaModalOpen(true)}
@@ -100,7 +125,6 @@ export default function ActivoDetallePage() {
                 </button>
             )}
 
-            {/* BOTÓN ELIMINAR */}
             <button
               onClick={handleDelete}
               className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
@@ -108,19 +132,41 @@ export default function ActivoDetallePage() {
               Eliminar Activo
             </button>
             
-            {/* VOLVER AL INVENTARIO */}
             <Link href="/dashboard" className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
               ← Volver
             </Link>
           </div>
         </div>
 
-        {/* ... (Resto del contenido de la página se mantiene igual) ... */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Columna Izquierda: Imagen y Detalles */}
           <div className="md:col-span-1 space-y-4">
-            <div className="flex h-64 items-center justify-center rounded-lg bg-gray-100">
-              <span className="text-gray-500">Imagen del activo</span>
+            
+            {/* --- SECCIÓN DE IMAGEN MEJORADA --- */}
+            <div className="flex h-64 items-center justify-center rounded-lg bg-gray-100 border border-gray-200 overflow-hidden bg-white relative">
+              {activo.imagen_url ? (
+                <img
+                  src={activo.imagen_url}
+                  alt={`Imagen de ${activo.nombre}`}
+                  className="h-full w-full object-contain" // 'contain' para no cortar la herramienta
+                  onError={(e) => {
+                    // Si falla la carga, ocultamos la imagen y mostramos el texto de respaldo
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'block'; 
+                  }}
+                />
+              ) : (
+                // Se muestra si NO hay URL guardada
+                <span className="text-gray-500 text-sm font-medium">Sin imagen asignada</span>
+              )}
+              
+              {/* Este span está oculto por defecto y solo sale si la imagen falla al cargar (onError) */}
+              <span className="hidden text-red-500 text-sm font-medium absolute">
+                Error al cargar imagen
+              </span>
             </div>
+            {/* --- FIN SECCIÓN IMAGEN --- */}
+
             <div className="rounded-lg border border-gray-200 p-4">
               <h3 className="text-lg font-semibold mb-3">Detalles Principales</h3>
               <div className="space-y-2">
@@ -132,6 +178,7 @@ export default function ActivoDetallePage() {
             </div>
           </div>
 
+          {/* Columna Derecha: Descripción y Stock */}
           <div className="md:col-span-2 space-y-4">
             <div className="rounded-lg border border-gray-200 p-4">
               <h3 className="text-lg font-semibold mb-2">Descripción</h3>
@@ -156,11 +203,15 @@ export default function ActivoDetallePage() {
         </div>
       </div>
 
+      {/* Modales */}
       {isEditModalOpen && (
-        <EditActivoModal activo={activo} onClose={() => setIsEditModalOpen(false)} onActivoUpdated={handleActivoUpdated} />
+        <EditActivoModal
+          activo={activo}
+          onClose={() => setIsEditModalOpen(false)}
+          onActivoUpdated={handleActivoUpdated}
+        />
       )}
       
-      {/* --- CAMBIO: Renderizado condicional del modal de entrada --- */}
       {isEntradaModalOpen && (
           <RegistrarEntradaModal
               activo={activo}

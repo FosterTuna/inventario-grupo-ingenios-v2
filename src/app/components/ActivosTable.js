@@ -1,7 +1,7 @@
 // src/app/components/ActivosTable.js
 "use client";
 import { useActivos } from '../context/ActivosContext';
-import Link from 'next/link'; // <-- 1. Importamos Link
+import Link from 'next/link';
 
 export default function ActivosTable() {
   const { activos, loading, error, openMovModal } = useActivos();
@@ -14,7 +14,6 @@ export default function ActivosTable() {
   }
 
   return (
-    // Div principal (sin el h1 de prueba)
     <div className="rounded-lg bg-white shadow-md overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 text-gray-900">
         <thead className="bg-gray-50">
@@ -47,19 +46,29 @@ export default function ActivosTable() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">{activo.ubicacion?.bodega} / {activo.ubicacion?.estante}</td>
                 
-                {/* --- 2. ESTA ES LA SECCIÓN CORREGIDA --- */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  {/* El 'href' apunta a la ruta de activos con el ID */}
                   <Link href={`/dashboard/activos/${activo._id}`} className="text-blue-600 hover:text-blue-900">
                     Ver Detalles
                   </Link>
                   
+                  {/* --- CAMBIO: BOTÓN CONDICIONAL --- */}
                   <button
-                    onClick={() => openMovModal(activo)}
-                    className="ml-4 text-blue-600 hover:text-blue-900"
+                    onClick={() => {
+                        if (activo.estado_actual === 'Mantenimiento') {
+                            alert('No se puede realizar la salida ya que se encuentra en mantenimiento.');
+                        } else {
+                            openMovModal(activo);
+                        }
+                    }}
+                    className={`ml-4 ${
+                        activo.estado_actual === 'Mantenimiento' 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-blue-600 hover:text-blue-900'
+                    }`}
                   >
                     Registrar Mov.
                   </button>
+                   {/* --- FIN DEL CAMBIO --- */}
                 </td>
               </tr>
             ))

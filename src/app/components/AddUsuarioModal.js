@@ -4,13 +4,11 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-// El modal recibe 'onClose' (para cerrarse) y 'onUserAdded' (para refrescar la tabla)
 export default function AddUsuarioModal({ onClose, onUserAdded }) {
-  // Estados para el formulario
   const [nombre_completo, setNombreCompleto] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
-  const [rol, setRol] = useState('Trabajador'); // Valor por defecto
+  const [rol, setRol] = useState('Trabajador');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -23,8 +21,12 @@ export default function AddUsuarioModal({ onClose, onUserAdded }) {
     }
 
     try {
-      // No necesitamos token para crear un usuario (según el backend que hicimos)
-      // Pero si tu ruta POST /api/usuarios estuviera protegida, lo necesitarías.
+      // 1. Obtener el token de quien está haciendo la acción
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setError('No estás autenticado. Inicia sesión para crear usuarios.');
+        return;
+      }
 
       const nuevoUsuario = {
         nombre_completo,
@@ -33,34 +35,33 @@ export default function AddUsuarioModal({ onClose, onUserAdded }) {
         rol
       };
 
-      // Hacemos el POST al backend
-      await axios.post('http://localhost:5000/api/usuarios', nuevoUsuario);
+      // 2. Enviar el token en los headers (CORRECCIÓN)
+      await axios.post('http://localhost:5000/api/usuarios', nuevoUsuario, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-      // Si todo sale bien:
-      onUserAdded(); // 1. Llama a la función para refrescar la tabla de usuarios
-      onClose(); // 2. Cierra el modal
+      onUserAdded(); 
+      onClose(); 
 
     } catch (err) {
       console.error(err);
-      // Mejoramos el mensaje de error para duplicados
       if (err.response?.data?.message && err.response.data.message.includes('E11000')) {
         setError('Ese nick-name ya existe. Por favor, elige otro.');
       } else {
+        // Esto mostrará errores como "No tienes permiso..." si no eres Jefe
         setError(err.response?.data?.message || 'Error al crear el usuario.');
       }
     }
   };
 
   return (
-    // Fondo oscuro semitransparente
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      {/* Contenedor del Modal */}
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Crear Nuevo Usuario</h2>
-
+        
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
-
+            
             <div>
               <label htmlFor="nombre_completo" className="block text-sm font-medium text-gray-700">Nombre Completo*</label>
               <input
@@ -115,16 +116,14 @@ export default function AddUsuarioModal({ onClose, onUserAdded }) {
 
           </div>
 
-          {/* Mensaje de Error */}
           {error && (
             <p className="my-4 text-center text-sm text-red-600">{error}</p>
           )}
 
-          {/* Botones de Acción */}
           <div className="mt-6 flex justify-end space-x-4">
             <button
               type="button"
-              onClick={onClose} // Botón para cerrar
+              onClick={onClose}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancelar

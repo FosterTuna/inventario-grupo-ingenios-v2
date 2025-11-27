@@ -2,25 +2,36 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const movimientoSchema = new Schema({
-  id_usuario_adjunta: { // Quién registra/entrega
+  id_usuario_adjunta: { 
     type: Schema.Types.ObjectId,
-    ref: 'User', // Referencia a la colección 'usuarios'
+    ref: 'User',
     required: true
   },
-  id_usuario_dispone: { // Quién recibe (si aplica)
+  id_usuario_dispone: { // Será NULL si es un visitante
     type: Schema.Types.ObjectId,
-    ref: 'User' // Referencia a la colección 'usuarios'
+    ref: 'User'
   },
   tipo_movimiento: {
     type: String,
     required: true,
-    enum: ['Entrada Inicial', 'Salida Uso', 'Salida Renta', 'Devolución'] // Tipos permitidos
+    enum: ['Entrada Inicial', 'Salida Uso', 'Salida Renta', 'Devolución']
   },
+  
+  // --- CAMPOS NUEVOS PARA VISITANTES ---
+  nombre_visitante: { 
+    type: String,
+    required: false // Opcional
+  },
+  apellidos_visitante: { 
+    type: String,
+    required: false // Opcional
+  },
+  // --- FIN DE CAMPOS NUEVOS ---
+
   observaciones: {
     type: String
   }
-  // La fecha se añadirá automáticamente con timestamps
-}, { timestamps: { createdAt: 'fecha_movimiento', updatedAt: false } }); // Usa 'createdAt' como la fecha del movimiento
+}, { timestamps: { createdAt: 'fecha_movimiento', updatedAt: false } });
 
 const Movimiento = mongoose.model('Movimiento', movimientoSchema);
 module.exports = Movimiento;
